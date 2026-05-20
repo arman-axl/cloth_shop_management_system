@@ -169,6 +169,10 @@ public class ClothShopGUI extends JFrame {
                      JOptionPane.showMessageDialog(ClothShopGUI.this, "Quantity must be greater than 0!"); 
                      return; 
                     }
+                if (q > found.getStock()) {
+                    JOptionPane.showMessageDialog(ClothShopGUI.this, "Not enough stock! Only " + found.getStock() + " item(s) available.");
+                    return;
+                }
                 int cost = found.getPrice() * q;
                 finalTotalAmount += cost;
                 billModel.addElement(String.format("%-15s (%s) x%d = %d TK", found.getName(), (String) sizeDropDown.getSelectedItem(), q, cost));
@@ -197,10 +201,27 @@ public class ClothShopGUI extends JFrame {
                 inv.append("\nDate: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())).append("\n");
                 for (int i = 0; i < billModel.size(); i++) inv.append(billModel.get(i)).append("\n");
                 inv.append("Total: ").append(finalTotalAmount).append(" TK\n------------------\n");
+
+                // Deduct stock for each sold item
+                for (int i = 0; i < billModel.size(); i++) {
+                    String line = (String) billModel.get(i);
+                    // line format: "ProductName    (S) x3 = 4497 TK"
+                    String productName = line.split("\\(")[0].trim();
+                    int qty = Integer.parseInt(line.split("x")[1].split("=")[0].trim());
+                    for (Product p : fileIO.readAll()) {
+                        if (p.getName().equalsIgnoreCase(productName)) {
+                            p.setStock(p.getStock() - qty);
+                            fileIO.updateProduct(p);
+                            break;
+                        }
+                    }
+                }
+
                 fileIO.saveInvoice(inv.toString());
                 JOptionPane.showMessageDialog(ClothShopGUI.this, "Order Confirmed & Saved!");
                 billModel.clear(); finalTotalAmount = 0;
                 totalBillLabel.setText("Total Bill: 0 TK");
+                refreshCardPanel();
             }
         });
 
